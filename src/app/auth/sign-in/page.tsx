@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -12,6 +13,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 
+// Bypass credentials -
+// WARNING: For development/testing only. Do not use in production.
+const BYPASS_EMAIL = "bypass@example.com";
+const BYPASS_PASSWORD = "password123";
+
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +28,20 @@ export default function SignInPage() {
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Bypass login check
+    if (email === BYPASS_EMAIL && password === BYPASS_PASSWORD) {
+      toast({
+        title: "Bypass Login Successful",
+        description: "Logged in with bypass credentials.",
+      });
+      // Simulate a slight delay for UX consistency if desired
+      // await new Promise(resolve => setTimeout(resolve, 500)); 
+      router.push("/dashboard");
+      // setIsLoading(false); // Already handled in finally block, but router.push might not wait
+      return; 
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/dashboard");
@@ -40,7 +60,7 @@ export default function SignInPage() {
     <Card className="w-full shadow-xl border-border/60">
       <CardHeader className="text-center space-y-1">
         <CardTitle className="text-3xl font-headline">Welcome Back!</CardTitle>
-        <CardDescription>Sign in to access your dashboard.</CardDescription>
+        <CardDescription>Sign in to access your dashboard. (Bypass: bypass@example.com / password123)</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSignIn} className="space-y-6">
