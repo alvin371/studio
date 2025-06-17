@@ -1,12 +1,58 @@
+
+"use client";
+
+import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload } from "lucide-react";
+import { Upload, Edit, UserCog, UserX, UserCheck } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
+const mockUsers = [
+  { id: '1', name: 'Alice Wonderland', email: 'alice@example.com', role: 'Admin', status: 'Active' },
+  { id: '2', name: 'Bob The Builder', email: 'bob@example.com', role: 'Editor', status: 'Active' },
+  { id: '3', name: 'Charlie Brown', email: 'charlie@example.com', role: 'Viewer', status: 'Disabled' },
+  { id: '4', name: 'Diana Prince', email: 'diana@example.com', role: 'Editor', status: 'Active' },
+];
+
+type User = typeof mockUsers[number];
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+  const [users, setUsers] = React.useState<User[]>(mockUsers);
+
+  const handleEditRole = (userId: string) => {
+    console.log(`Edit role for user ${userId}`);
+    toast({ title: "Action: Edit Role", description: `Triggered edit role for user ID: ${userId}` });
+    // In a real app, this would open a dialog to change the user's role
+  };
+
+  const handleToggleStatus = (userId: string) => {
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
+        user.id === userId
+          ? { ...user, status: user.status === 'Active' ? 'Disabled' : 'Active' }
+          : user
+      )
+    );
+    const user = users.find(u => u.id === userId);
+    toast({
+      title: "Action: Toggle Status",
+      description: `User ${user?.name} status changed to ${user?.status === 'Active' ? 'Disabled' : 'Active'}. (Mock update)`,
+    });
+  };
+  
+  const handleAddNewUser = () => {
+    console.log("Add new user clicked");
+    toast({ title: "Action: Add User", description: "Triggered add new user. (No functionality yet)" });
+    // In a real app, this would open a form/dialog to add a new user
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -46,7 +92,7 @@ export default function SettingsPage() {
                   Upload Logo
                 </Button>
               </div>
-              <Button>Save Changes</Button>
+              <Button onClick={() => toast({title: "Store Details Saved", description: "Your store details have been updated. (Mock action)"})}>Save Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -54,14 +100,48 @@ export default function SettingsPage() {
         <TabsContent value="user_roles">
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline">User Roles</CardTitle>
-              <CardDescription>Manage user accounts and their permissions.</CardDescription>
+              <CardTitle className="font-headline">User Roles & Permissions</CardTitle>
+              <CardDescription>Manage user accounts and their access levels within the system.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
-                <p className="text-muted-foreground">User Roles Management UI Placeholder</p>
+              <div className="mb-4 flex justify-end">
+                <Button onClick={handleAddNewUser}>
+                  <UserPlus className="mr-2 h-4 w-4" /> Add New User
+                </Button>
               </div>
-               <Button className="mt-4">Add New User</Button>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.role}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.status === "Active" ? "secondary" : "destructive"}>
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditRole(user.id)} title="Edit Role">
+                          <UserCog className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user.id)} title={user.status === 'Active' ? 'Disable User' : 'Enable User'}>
+                          {user.status === 'Active' ? <UserX className="h-4 w-4 text-destructive" /> : <UserCheck className="h-4 w-4 text-green-600" />}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -85,7 +165,7 @@ export default function SettingsPage() {
                 <Label htmlFor="receiptFormat">Receipt Format</Label>
                  <Input id="receiptFormat" defaultValue="Standard" />
               </div>
-              <Button>Save Preferences</Button>
+              <Button onClick={() => toast({title: "Preferences Saved", description: "System preferences have been updated. (Mock action)"})}>Save Preferences</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -93,3 +173,14 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+// Helper icon to avoid build errors if UserPlus is not available in lucide-react.
+// In a real scenario, ensure all icons are correctly imported and available.
+const UserPlus = ({className}: {className?: string}) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <line x1="19" x2="19" y1="8" y2="14"/>
+    <line x1="22" x2="16" y1="11" y2="11"/>
+  </svg>
+);
