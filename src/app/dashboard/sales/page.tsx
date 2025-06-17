@@ -16,8 +16,8 @@ interface Product {
   name: string;
   price: number;
   image: string;
-  category?: string; // Optional, for consistency if reusing elsewhere
-  stock?: number;    // Optional
+  category?: string; 
+  stock?: number;    
 }
 
 interface CartItem extends Product {
@@ -87,6 +87,38 @@ export default function SalesPage() {
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const taxAmount = subtotal * TAX_RATE;
   const total = subtotal + taxAmount;
+
+  const handleApplyDiscount = () => {
+    toast({
+      title: "Apply Discount (Mock Action)",
+      description: "Discount functionality would be applied here.",
+    });
+  };
+
+  const handleAddNotes = () => {
+    toast({
+      title: "Add Notes (Mock Action)",
+      description: "A dialog to add notes to the sale would appear here.",
+    });
+  };
+
+  const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "Please add items to the cart before checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Checkout Initiated (Mock Action)",
+      description: `Proceeding to payment for a total of $${total.toFixed(2)}.`,
+    });
+    // In a real app, you would navigate to a payment page or process payment here.
+    // Potentially clear the cart: setCartItems([]);
+  };
+
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)]"> {/* Adjust height as needed */}
@@ -206,14 +238,14 @@ export default function SalesPage() {
                   <span>${total.toFixed(2)}</span>
                 </div>
                 <div className="flex gap-2 pt-2">
-                    <Button variant="outline" className="flex-1" onClick={() => toast({title: "Mock Action", description: "Apply Discount clicked."})}>
+                    <Button variant="outline" className="flex-1" onClick={handleApplyDiscount}>
                         <Percent className="mr-2 h-4 w-4" /> Discount
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => toast({title: "Mock Action", description: "Add Notes clicked."})}>
+                    <Button variant="outline" className="flex-1" onClick={handleAddNotes}>
                         <StickyNote className="mr-2 h-4 w-4" /> Notes
                     </Button>
                 </div>
-                <Button size="lg" className="w-full font-semibold h-11 text-base font-headline" onClick={() => toast({title: "Mock Action", description: "Checkout initiated. Total: $" + total.toFixed(2) })}>
+                <Button size="lg" className="w-full font-semibold h-11 text-base font-headline" onClick={handleCheckout}>
                   Checkout
                 </Button>
               </CardFooter>
