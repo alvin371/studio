@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,36 +10,75 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
+  // DropdownMenuShortcut, // Removed as it's not fully implemented
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, Settings } from "lucide-react";
+import { Settings, LogOut, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export function UserNav() {
-  // In a real app, you'd get user data from context or a hook
-  const user = {
-    name: "Admin User",
-    email: "admin@retailflow.com",
-    avatar: "https://placehold.co/100x100.png",
+  const { user, signOut, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      toast({ title: "Signed Out", description: "You have been successfully signed out." });
+    } catch (error) {
+      toast({ title: "Sign Out Error", description: "Failed to sign out. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSigningOut(false);
+    }
   };
+
+  if (authLoading) {
+    return (
+      <Button variant="ghost" className="relative h-9 w-9 rounded-full" disabled>
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </Button>
+    );
+  }
+
+  if (!user) {
+    return null; 
+  }
+
+  const displayName = user.displayName || "User";
+  const userEmail = user.email || "No email provided";
+  
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+  const avatarFallback = getInitials(displayName);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="user avatar" />
-            <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+            {user.photoURL ? (
+              <AvatarImage src={user.photoURL} alt={displayName} data-ai-hint="user avatar" />
+            ) : (
+               <AvatarImage src={`https://placehold.co/100x100.png?text=${avatarFallback}`} alt={displayName} data-ai-hint="user avatar placeholder" />
+            )}
+            <AvatarFallback>{avatarFallback}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {userEmail}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -48,15 +88,15 @@ export function UserNav() {
             <Link href="/dashboard/settings">
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
-              <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+              {/* <DropdownMenuShortcut>⌘S</DropdownMenuShortcut> */}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => alert("Log out functionality to be implemented")}>
-          <LogOut className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut}>
+          {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
           <span>Log out</span>
-          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+          {/* <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut> */}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

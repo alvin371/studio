@@ -14,12 +14,12 @@ import {
   SidebarTrigger,
   SidebarInset,
   SidebarRail,
-  SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+import { Loader2 } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -27,7 +27,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [pageTitle, setPageTitle] = React.useState("Dashboard");
+
+  React.useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth/sign-in");
+    }
+  }, [user, loading, router]);
 
   React.useEffect(() => {
     const currentNavItem = [...siteConfig.mainNav, ...siteConfig.settingsNav].find(item => item.href === pathname);
@@ -37,6 +45,14 @@ export default function DashboardLayout({
       setPageTitle("Dashboard");
     }
   }, [pathname]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider defaultOpen>
@@ -67,7 +83,6 @@ export default function DashboardLayout({
               <h2 className="text-lg font-headline font-semibold">{pageTitle}</h2>
             </div>
             <div className="flex items-center gap-x-4">
-               {/* Add any quick actions here if needed */}
               <UserNav />
             </div>
           </div>
