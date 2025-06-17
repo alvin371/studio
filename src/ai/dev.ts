@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/underperforming-products.ts';
+import '@/ai/flows/discount-suggestion.ts';
+import '@/ai/flows/bundling-suggestions.ts';
