@@ -1,3 +1,6 @@
+
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Edit3, Bell, Search } from "lucide-react";
@@ -13,6 +16,37 @@ const inventoryItems = [
 ];
 
 export default function InventoryPage() {
+
+  const handleExportCSV = () => {
+    const headers = ["Product ID", "Name", "Stock", "Status", "Last Adjusted"];
+    const csvRows = [
+      headers.join(","), // header row
+      ...inventoryItems.map(item => 
+        [
+          item.id,
+          `"${item.name.replace(/"/g, '""')}"`, // Escape double quotes in name
+          item.stock,
+          item.status,
+          item.lastAdjusted
+        ].join(",")
+      )
+    ];
+    
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "inventory_data.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -25,7 +59,7 @@ export default function InventoryPage() {
             <Bell className="mr-2 h-4 w-4" />
             Low Stock Alerts
           </Button>
-          <Button>
+          <Button onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
