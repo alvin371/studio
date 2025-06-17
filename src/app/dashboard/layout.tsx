@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -21,6 +22,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Loader2 } from "lucide-react";
 
+// Helper function to check bypass status (client-side only)
+const isBypassActive = (): boolean => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("bypassUser") === "true";
+  }
+  return false;
+};
+
 export default function DashboardLayout({
   children,
 }: {
@@ -32,7 +41,8 @@ export default function DashboardLayout({
   const [pageTitle, setPageTitle] = React.useState("Dashboard");
 
   React.useEffect(() => {
-    if (!loading && !user) {
+    const bypass = isBypassActive();
+    if (!loading && !user && !bypass) {
       router.push("/auth/sign-in");
     }
   }, [user, loading, router]);
@@ -46,7 +56,12 @@ export default function DashboardLayout({
     }
   }, [pathname]);
 
-  if (loading || !user) {
+  // Show loader if Firebase auth is loading, or if not authenticated (no user and no bypass)
+  const bypass = isBypassActive(); // Check here for loading state decision
+  if (loading || (!user && !bypass)) {
+    // If AuthProvider's global loader is also active, this might be redundant,
+    // but it ensures DashboardLayout itself doesn't render content prematurely.
+    // The AuthProvider's loader is more for the initial app load.
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
