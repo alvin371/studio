@@ -35,15 +35,19 @@ export default function SignInPage() {
         title: "Bypass Login Successful",
         description: "Logged in with bypass credentials.",
       });
-      // Simulate a slight delay for UX consistency if desired
-      // await new Promise(resolve => setTimeout(resolve, 500)); 
+      if (typeof window !== "undefined") {
+        localStorage.setItem("bypassUser", "true");
+      }
       router.push("/dashboard");
-      // setIsLoading(false); // Already handled in finally block, but router.push might not wait
-      return; 
+      // setIsLoading(false); // Handled in finally block
+      return;
     }
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("bypassUser"); // Clear bypass if regular login succeeds
+      }
       router.push("/dashboard");
     } catch (error: any) {
       toast({

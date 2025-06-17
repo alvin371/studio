@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { User } from "firebase/auth";
@@ -21,6 +22,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Function to check bypass status, client-side only
+  const isBypassActive = (): boolean => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("bypassUser") === "true";
+    }
+    return false;
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -30,7 +39,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user && !pathname.startsWith('/auth') && pathname !== '/') {
+    if (loading) return; // Wait if Firebase auth state is still loading
+
+    const bypassActive = isBypassActive();
+    const onAuthPage = pathname.startsWith('/auth');
+
+    // If there's a Firebase user or bypass is active, the user is "authenticated"
+    if (user || bypassActive) {
+      // If on an auth page but "authenticated", redirect to dashboard
+      if (onAuthPage) {
+        router.push('/dashboard');
+      }
+      return; // Allowed to stay on current non-auth page or redirected from auth page
+    }
+
+    // At this point: no Firebase user, bypass not active, and auth is not loading.
+    // If not on an auth page or the root page (which redirects to dashboard), then redirect to sign-in.
+    const isRootPage = pathname === '/';
+    
+    if (!onAuthPage && !isRootPage) {
       router.push('/auth/sign-in');
     }
   }, [user, loading, router, pathname]);
@@ -40,6 +67,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await firebaseSignOut(auth);
       setUser(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("bypassUser"); // Clear bypass flag
+      }
       router.push('/auth/sign-in');
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -48,8 +78,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   };
-
-  if (loading && !pathname.startsWith('/auth')) {
+  
+  // Show global loader only if auth is genuinely loading, bypass is not active, and not on an auth page.
+  if (loading && !isBypassActive() && !pathname.startsWith('/auth')) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
