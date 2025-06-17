@@ -46,7 +46,22 @@ export default function InventoryPage() {
   const [isLowStockAlertsOpen, setIsLowStockAlertsOpen] = React.useState(false);
   const [lowStockProducts, setLowStockProducts] = React.useState<InventoryItem[]>([]);
 
+  const filteredInventoryItems = React.useMemo(() => {
+    return inventoryItems.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [inventoryItems, searchTerm]);
+
   const handleExportCSV = () => {
+    if (filteredInventoryItems.length === 0) {
+      toast({
+        title: "Export Notice",
+        description: "No items to export based on current filters.",
+        variant: "default",
+      });
+      return;
+    }
     const headers = ["Product ID", "Name", "Stock", "Status", "Last Adjusted"];
     const csvRows = [
       headers.join(","),
@@ -54,7 +69,7 @@ export default function InventoryPage() {
         const statusInfo = getItemStatus(item.stock);
         return [
           item.id,
-          `"${item.name.replace(/"/g, '""')}"`,
+          `"${item.name.replace(/"/g, '""')}"`, // Handle names with commas
           item.stock,
           statusInfo.text,
           item.lastAdjusted
@@ -76,7 +91,7 @@ export default function InventoryPage() {
       URL.revokeObjectURL(url);
        toast({
         title: "Export Successful",
-        description: "Inventory data has been exported to CSV.",
+        description: "Filtered inventory data has been exported to CSV.",
       });
     } else {
        toast({
@@ -88,15 +103,27 @@ export default function InventoryPage() {
   };
 
   const handleShowLowStockAlerts = () => {
+    // Alerts should operate on the full inventory list, not filtered
     const alerts = inventoryItems.filter(item => item.stock > 0 && item.stock <= LOW_STOCK_THRESHOLD);
     setLowStockProducts(alerts);
     setIsLowStockAlertsOpen(true);
   };
   
-  const filteredInventoryItems = inventoryItems.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleAdjustStock = (item: InventoryItem) => {
+    // Mock action: In a real app, this would open a dialog to input new stock or adjustment amount
+    toast({
+      title: "Adjust Stock (Mock Action)",
+      description: `Triggered for ${item.name}. Current stock: ${item.stock}.`,
+    });
+    // Example: For a real implementation, you might do something like:
+    // const newStock = prompt(`Enter new stock for ${item.name}:`, String(item.stock));
+    // if (newStock !== null && !isNaN(parseInt(newStock))) {
+    //   setInventoryItems(prevItems => 
+    //     prevItems.map(i => i.id === item.id ? {...i, stock: parseInt(newStock), lastAdjusted: new Date().toISOString().split('T')[0] } : i)
+    //   );
+    //   toast({ title: "Stock Updated (Mock)", description: `${item.name} stock set to ${newStock}.`});
+    // }
+  };
 
   return (
     <div className="space-y-6">
@@ -105,10 +132,10 @@ export default function InventoryPage() {
           <h1 className="text-3xl font-headline font-bold tracking-tight">Inventory Management</h1>
           <p className="text-muted-foreground">Track and manage your product stock levels. Low stock threshold: {LOW_STOCK_THRESHOLD} units.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={handleShowLowStockAlerts}>
             <Bell className="mr-2 h-4 w-4" />
-            Low Stock Alerts
+            Low Stock Alerts ({inventoryItems.filter(item => item.stock > 0 && item.stock <= LOW_STOCK_THRESHOLD).length})
           </Button>
           <Button onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
@@ -120,11 +147,12 @@ export default function InventoryPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Stock Levels</CardTitle>
-          <CardDescription>Live tracking of product inventory.</CardDescription>
+          <CardDescription>Live tracking of product inventory. Use the search below to filter items.</CardDescription>
            <div className="flex flex-col sm:flex-row gap-2 pt-4">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
+                type="search"
                 placeholder="Search inventory by name or ID..." 
                 className="pl-8" 
                 value={searchTerm}
@@ -146,7 +174,7 @@ export default function InventoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInventoryItems.map((item) => {
+              {filteredInventoryItems.length > 0 ? filteredInventoryItems.map((item) => {
                 const statusInfo = getItemStatus(item.stock);
                 return (
                   <TableRow key={item.id}>
@@ -154,35 +182,38 @@ export default function InventoryPage() {
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-right">{item.stock}</TableCell>
                     <TableCell>
-                      <Badge variant={statusInfo.variant}>
+                      <Badge variant={statusInfo.variant} className={statusInfo.variant === 'default' ? 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30 hover:bg-yellow-500/30' : ''}>
                         {statusInfo.text}
                       </Badge>
                     </TableCell>
                     <TableCell>{item.lastAdjusted}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => toast({title: "Action: Adjust Stock", description: `Triggered for ${item.name}. (Mock action)`})}>
+                      <Button variant="ghost" size="sm" onClick={() => handleAdjustStock(item)}>
                         <Edit3 className="mr-2 h-4 w-4" /> Adjust Stock
                       </Button>
                     </TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    {searchTerm ? "No inventory items found matching your search." : "No inventory items available."}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
-          {filteredInventoryItems.length === 0 && (
-             <p className="text-center text-muted-foreground py-8">No inventory items found matching your criteria.</p>
-          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Stock Adjustment Log</CardTitle>
-          <CardDescription>History of all stock adjustments. (Placeholder)</CardDescription>
+          <CardDescription>History of all stock adjustments. (This is a placeholder for future implementation)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
-            <p className="text-muted-foreground">Adjustment Log Table Placeholder</p>
+          <div className="h-[200px] w-full bg-muted/50 rounded-md flex items-center justify-center border border-dashed">
+            <p className="text-muted-foreground">Adjustment Log Table / Data Placeholder</p>
           </div>
         </CardContent>
       </Card>
@@ -192,7 +223,7 @@ export default function InventoryPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center">
-              <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />
+              <AlertTriangle className="mr-2 h-5 w-5 text-yellow-600" />
               Low Stock Alerts
             </DialogTitle>
             <DialogDescription>
