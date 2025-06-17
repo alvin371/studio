@@ -1,6 +1,7 @@
+
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  // DropdownMenuShortcut, // Removed as it's not fully implemented
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, LogOut, Loader2 } from "lucide-react";
@@ -18,15 +18,29 @@ import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 
+// Helper function to check bypass status (client-side only)
+const isBypassActiveClient = (): boolean => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("bypassUser") === "true";
+  }
+  return false;
+};
+
 export function UserNav() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [isSigningOut, setIsSigningOut] = React.useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [bypassUserActive, setBypassUserActive] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client after the component mounts
+    setBypassUserActive(isBypassActiveClient());
+  }, []);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut();
+      await signOut(); // signOut from AuthContext handles localStorage clear and navigation
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
     } catch (error) {
       toast({ title: "Sign Out Error", description: "Failed to sign out. Please try again.", variant: "destructive" });
@@ -43,33 +57,48 @@ export function UserNav() {
     );
   }
 
-  if (!user) {
-    return null; 
-  }
+  let displayName: string;
+  let userEmail: string;
+  let photoURL: string | null | undefined;
+  let initials: string;
+  let isActualUser = !!user;
 
-  const displayName = user.displayName || "User";
-  const userEmail = user.email || "No email provided";
-  
-  const getInitials = (name: string) => {
+  const getInitialsFromName = (name: string) => {
     const names = name.split(' ');
+    if (names.length === 1 && names[0].length > 0) {
+      return names[0].substring(0, 2).toUpperCase();
+    }
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return "XX"; // Fallback initials
+  };
+
+  if (isActualUser) {
+    displayName = user.displayName || "User";
+    userEmail = user.email || "No email provided";
+    photoURL = user.photoURL;
+    initials = getInitialsFromName(displayName);
+  } else if (bypassUserActive) {
+    displayName = "Bypass User";
+    userEmail = "bypass@example.com";
+    photoURL = null; // Bypass user has no specific photoURL
+    initials = "BU";
+  } else {
+    // No Firebase user and bypass is not active (or still determining client-side)
+    return null;
   }
-  const avatarFallback = getInitials(displayName);
+  
+  const avatarImageSrc = photoURL || `https://placehold.co/100x100.png?text=${initials}`;
+  const avatarImageHint = photoURL ? "user avatar" : "user avatar placeholder";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            {user.photoURL ? (
-              <AvatarImage src={user.photoURL} alt={displayName} data-ai-hint="user avatar" />
-            ) : (
-               <AvatarImage src={`https://placehold.co/100x100.png?text=${avatarFallback}`} alt={displayName} data-ai-hint="user avatar placeholder" />
-            )}
-            <AvatarFallback>{avatarFallback}</AvatarFallback>
+            <AvatarImage src={avatarImageSrc} alt={displayName} data-ai-hint={avatarImageHint} />
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -84,11 +113,10 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/settings">
+          <DropdownMenuItem asChild disabled={!isActualUser} style={!isActualUser ? { pointerEvents: 'none', opacity: 0.5 } : {}}>
+            <Link href="/dashboard/settings" tabIndex={!isActualUser ? -1 : 0}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
-              {/* <DropdownMenuShortcut>⌘S</DropdownMenuShortcut> */}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -96,7 +124,6 @@ export function UserNav() {
         <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut}>
           {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
           <span>Log out</span>
-          {/* <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut> */}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
